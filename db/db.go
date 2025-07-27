@@ -60,6 +60,7 @@ func createTables() {
 			price INTEGER,
 			duration INTEGER,
 			user_id INTEGER,
+			media_urls TEXT,
 			FOREIGN KEY (user_id) REFERENCES users(id)
 		)
 	`

@@ -27,5 +27,6 @@ func RegisterRoutes(server *gin.Engine) {
 	authenticated.GET("/services", getServicesForUser)
 	authenticated.POST("/services", createService)
 
-	authenticated.GET("/cloudinary-signature", cloud.GetCloudinarySignature)
+	// authenticated.GET("/cloudinary-signature", cloud.GetCloudinarySignature)
+	authenticated.POST("/upload", cloud.UploadHandler)
 }
