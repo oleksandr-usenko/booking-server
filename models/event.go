@@ -20,7 +20,7 @@ var events = []Event{}
 func (e *Event) Save() error {
 	query := `
 		INSERT INTO events(name, description, location, dateTime, user_id)
-		VALUES (?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5)
 	`
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
@@ -61,7 +61,7 @@ func GetAllEvents() ([]Event, error) {
 }
 
 func GetEventById(id int64) (*Event, error) {
-	query := "SELECT * FROM events WHERE id = ?"
+	query := "SELECT * FROM events WHERE id = $1"
 	row := db.DB.QueryRow(query, id)
 
 	var event Event
@@ -76,8 +76,8 @@ func GetEventById(id int64) (*Event, error) {
 func (event Event) Update() error {
 	query := `
 		UPDATE events
-		SET name = ?, description = ?, location = ?, dateTime = ?
-		WHERE id = ?
+		SET name = $1, description = $2, location = $3, dateTime = $4
+		WHERE id = $5
 	`
 
 	stmt, err := db.DB.Prepare(query)
@@ -93,7 +93,7 @@ func (event Event) Update() error {
 }
 
 func (event Event) Delete() error {
-	query := "DELETE FROM events WHERE id = ?"
+	query := "DELETE FROM events WHERE id = $1"
 
 	stmt, err := db.DB.Prepare(query)
 
@@ -108,7 +108,7 @@ func (event Event) Delete() error {
 }
 
 func (e Event) Register(userId int64) error {
-	query := "INSERT INTO registrations(event_id, user_id) VALUES (?, ?)"
+	query := "INSERT INTO registrations(event_id, user_id) VALUES ($1, $2)"
 	stmt, err := db.DB.Prepare(query)
 
 	if err != nil {
@@ -122,7 +122,7 @@ func (e Event) Register(userId int64) error {
 }
 
 func (e Event) Unregister(userId int64) error {
-	query := "DELETE FROM registrations WHERE event_id = ? AND user_id = ?"
+	query := "DELETE FROM registrations WHERE event_id = $1 AND user_id = $2"
 	stmt, err := db.DB.Prepare(query)
 
 	if err != nil {

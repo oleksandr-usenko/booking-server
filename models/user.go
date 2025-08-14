@@ -14,7 +14,7 @@ type User struct {
 }
 
 func (u User) Save() error {
-	query := `INSERT INTO users(email, password) VALUES (?, ?)`
+	query := `INSERT INTO users(email, password) VALUES ($1, $2)`
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func (u User) Save() error {
 }
 
 func (u *User) ValidateCredentials() error {
-	query := `SELECT id, password FROM users WHERE email = ?`
+	query := `SELECT id, password FROM users WHERE email = $1`
 	row := db.DB.QueryRow(query, u.Email)
 
 	var retrievedPassword string
@@ -50,7 +50,7 @@ func (u *User) ValidateCredentials() error {
 	passwordIsValid := utils.CheckPasswordHash(u.Password, retrievedPassword)
 
 	if !passwordIsValid {
-		return errors.New("Invalid credentials")
+		return errors.New("invalid credentials")
 	}
 
 	return nil

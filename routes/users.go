@@ -38,7 +38,11 @@ func login(context *gin.Context) {
 	err = user.ValidateCredentials()
 
 	if err != nil {
-		context.JSON(http.StatusUnauthorized, gin.H{"message": "Could not authorize user: " + err.Error()})
+		context.JSON(http.StatusUnauthorized, gin.H{
+			"message":    "Could not authorize user: invalid login and/or password",
+			"error_type": "invalidLogin",
+		})
+		return
 	}
 
 	token, refreshToken, err := utils.GenerateTokens(user.Email, user.ID)
@@ -58,17 +62,25 @@ func login(context *gin.Context) {
 	// })
 
 	context.SetCookie("refresh_token", refreshToken, int(utils.REFRESH_TOKEN_LIFETIME), "/", "localhost", false, true)
-	context.JSON(http.StatusOK, gin.H{"message": "Auth success", "token": token})
+	context.JSON(http.StatusOK, gin.H{
+		"message":              "Auth success",
+		"token":                token,
+		"refresh_token":        refreshToken,
+		"refresh_token_expire": int(utils.REFRESH_TOKEN_LIFETIME),
+	})
 }
 
 func refresh(context *gin.Context) {
-	cookie, err := context.Cookie("refresh_token")
-	if err != nil {
-		context.JSON(http.StatusUnauthorized, gin.H{"message": "No refresh token"})
+	var body struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+	if err := context.BindJSON(&body); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body"})
 		return
 	}
+	refreshToken := body.RefreshToken
 
-	userId, email, err := utils.VerifyToken(cookie)
+	userId, email, err := utils.VerifyToken(refreshToken)
 	if err != nil {
 		context.JSON(http.StatusUnauthorized, gin.H{"message": "Invalid refresh token"})
 		return
