@@ -42,14 +42,14 @@ func createService(context *gin.Context) {
 	form, _ := context.MultipartForm()
 	files := form.File["media"]
 
-	var mediaUrls []string
+	var mediaItems []models.MediaItem
 	for _, fileHeader := range files {
-		url, err := cloud.HandleFile(fileHeader)
+		item, err := cloud.HandleFile(fileHeader)
 		if err != nil {
 			context.JSON(http.StatusInternalServerError, gin.H{"error": "Upload failed: " + err.Error()})
 			return
 		}
-		mediaUrls = append(mediaUrls, url)
+		mediaItems = append(mediaItems, item)
 	}
 
 	now := time.Now().UTC()
@@ -61,7 +61,7 @@ func createService(context *gin.Context) {
 		Duration:    duration,
 		Timestamp:   &now,
 		UserID:      userId,
-		Media:       mediaUrls,
+		Media:       mediaItems,
 	}
 
 	service, err = service.CreateService()
@@ -110,4 +110,133 @@ func editService(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, gin.H{"message": "Success!", "service": updatedService})
+}
+
+func deleteServiceMedia(c *gin.Context) {
+	serviceID, err := strconv.ParseInt(c.Param("serviceId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid service ID: " + err.Error()})
+		return
+	}
+
+	publicID := c.Param("id")
+	if publicID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing media id"})
+		return
+	}
+
+	userID := c.GetInt64("userId")
+
+	service, err := models.GetServiceById(serviceID, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Service not found"})
+		return
+	}
+
+	if service.UserID != userID {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "You are not allowed to modify this service"})
+		return
+	}
+
+	cloud.DeleteMedia(c, publicID)
+
+	updatedMedia := []models.MediaItem{}
+	for _, mediaItem := range service.Media {
+		if mediaItem.PublicID != publicID {
+			updatedMedia = append(updatedMedia, mediaItem)
+		}
+	}
+	service.Media = updatedMedia
+
+	_, err = service.SaveMedia()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update service media: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Media deleted successfully"})
+
+}
+
+type UpdateServiceMedia struct {
+	Media []models.MediaItem `json:"media"`
+}
+
+func addServiceMedia(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	userID := c.GetInt64("userId")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid service ID: " + err.Error()})
+		return
+	}
+
+	service, err := models.GetServiceById(id, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Service not found " + err.Error()})
+		return
+	}
+
+	if service.UserID != userID {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "You are not allowed to modify this service"})
+		return
+	}
+
+	form, _ := c.MultipartForm()
+	files := form.File["media"]
+
+	var mediaItems []models.MediaItem
+	for _, fileHeader := range files {
+		item, err := cloud.HandleFile(fileHeader)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload failed: " + err.Error()})
+			return
+		}
+		mediaItems = append(mediaItems, item)
+	}
+
+	service.Media = append(service.Media, mediaItems...)
+
+	service, err = service.SaveMedia()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update service media: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Media added successfully", "service": service})
+}
+
+func updateMediaOrder(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	userID := c.GetInt64("userId")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid service ID: " + err.Error()})
+		return
+	}
+
+	service, err := models.GetServiceById(id, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Service not found " + err.Error()})
+		return
+	}
+
+	if service.UserID != userID {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "You are not allowed to modify this service"})
+		return
+	}
+
+	var updatedMedia UpdateServiceMedia
+	err = c.BindJSON(&updatedMedia)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	service.Media = updatedMedia.Media
+	service, err = service.SaveMedia()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update service media: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Media added successfully", "service": service})
 }

@@ -8,20 +8,27 @@ import (
 	"example.com/db"
 )
 
+type MediaItem struct {
+	PublicID string `json:"public_id"`
+	FileName string `json:"fileName"`
+	URI      string `json:"uri"`
+	MimeType string `json:"mimeType"`
+}
+
 type Service struct {
-	ID          int64      `json:"id"`
-	Name        string     `binding:"required" json:"name"`
-	Description string     `json:"description"`
-	Price       int64      `binding:"required" json:"price"`
-	Currency    string     `binding:"required" json:"currency"`
-	Duration    int64      `json:"duration"`
-	Timestamp   *time.Time `json:"timestamp,omitempty"`
-	UserID      int64      `json:"user_id"`
-	Media       []string   `json:"media_urls"`
+	ID          int64       `json:"id"`
+	Name        string      `binding:"required" json:"name"`
+	Description string      `json:"description"`
+	Price       int64       `binding:"required" json:"price"`
+	Currency    string      `binding:"required" json:"currency"`
+	Duration    int64       `json:"duration"`
+	Timestamp   *time.Time  `json:"timestamp,omitempty"`
+	UserID      int64       `json:"user_id"`
+	Media       []MediaItem `json:"media"`
 }
 
 func GetServicesForUser(id int64) ([]Service, error) {
-	query := "SELECT * FROM services WHERE user_id = $1"
+	query := "SELECT id, name, description, price, duration, media, currency, timestamp FROM services WHERE user_id = $1"
 	rows, err := db.DB.Query(query, id)
 	if err != nil {
 		return nil, err
@@ -32,6 +39,7 @@ func GetServicesForUser(id int64) ([]Service, error) {
 
 	for rows.Next() {
 		var service Service
+		service.Media = []MediaItem{}
 		var mediaJson *string
 		err := rows.Scan(
 			&service.ID,
@@ -39,7 +47,6 @@ func GetServicesForUser(id int64) ([]Service, error) {
 			&service.Description,
 			&service.Price,
 			&service.Duration,
-			&service.UserID,
 			&mediaJson,
 			&service.Currency,
 			&service.Timestamp,
@@ -54,7 +61,7 @@ func GetServicesForUser(id int64) ([]Service, error) {
 				return nil, fmt.Errorf("failed to decode media JSON: %w", err)
 			}
 		} else {
-			service.Media = []string{}
+			service.Media = []MediaItem{}
 		}
 
 		services = append(services, service)
@@ -64,18 +71,22 @@ func GetServicesForUser(id int64) ([]Service, error) {
 }
 
 func GetServiceById(id, userId int64) (*Service, error) {
-	query := "SELECT * FROM services WHERE user_id = $1 AND id = $2"
+	query := "SELECT id, name, description, price, duration, media, currency, timestamp, user_id FROM services WHERE user_id = $1 AND id = $2"
 	row := db.DB.QueryRow(query, userId, id)
 
 	var service Service
-	var mediaJson string
-	err := row.Scan(&service.ID, &service.Name, &service.Description, &service.Price, &service.Duration, &service.UserID, &mediaJson, &service.Currency, &service.Timestamp)
+	var mediaJson *string
+	err := row.Scan(&service.ID, &service.Name, &service.Description, &service.Price, &service.Duration, &mediaJson, &service.Currency, &service.Timestamp, &service.UserID)
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal([]byte(mediaJson), &service.Media)
-	if err != nil {
-		return nil, err
+	if mediaJson != nil && *mediaJson != "" {
+		err = json.Unmarshal([]byte(*mediaJson), &service.Media)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		service.Media = []MediaItem{}
 	}
 
 	return &service, nil
@@ -87,22 +98,26 @@ func (s *Service) CreateService() (*Service, error) {
 		return nil, err
 	}
 	query := `
-		INSERT INTO services(name, description, price, currency, duration, timestamp, user_id, media_urls)
+		INSERT INTO services(name, description, price, currency, duration, timestamp, user_id, media)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id
 	`
-	stmt, err := db.DB.Prepare(query)
+	err = db.DB.QueryRow(
+		query,
+		s.Name,
+		s.Description,
+		s.Price,
+		s.Currency,
+		s.Duration,
+		s.Timestamp,
+		s.UserID,
+		string(mediaJson),
+	).Scan(&s.ID)
+
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
 
-	res, err := stmt.Exec(s.Name, s.Description, s.Price, s.Currency, s.Duration, time.Now().UTC(), s.UserID, string(mediaJson))
-	if err != nil {
-		return nil, err
-	}
-
-	id, err := res.LastInsertId()
-	s.ID = id
 	return s, err
 }
 
@@ -123,4 +138,29 @@ func (s *Service) UpdateService() error {
 
 	_, err = stmt.Exec(s.Name, s.Description, s.Price, s.Currency, s.Duration, time.Now().UTC(), s.ID, s.UserID)
 	return err
+}
+
+func (s *Service) SaveMedia() (*Service, error) {
+	mediaJSON, err := json.Marshal(s.Media)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal media: %w", err)
+	}
+	query := `
+		UPDATE services
+		SET media = $1, timestamp = $2
+		WHERE id = $3 AND user_id = $4
+	`
+
+	stmt, err := db.DB.Prepare(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer stmt.Close()
+
+	now := time.Now().UTC()
+	s.Timestamp = &now
+
+	_, err = stmt.Exec(mediaJSON, s.Timestamp, s.ID, s.UserID)
+	return s, err
 }

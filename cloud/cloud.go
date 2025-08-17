@@ -11,13 +11,15 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
+	"example.com/models"
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 )
 
@@ -52,72 +54,101 @@ func (cloud *CloudProvider) GetCloudinarySignature(context *gin.Context) {
 	})
 }
 
-func UploadHandler(c *gin.Context) {
-	form, err := c.MultipartForm()
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid multipart form"})
-		return
-	}
+// func UploadHandler(c *gin.Context) {
+// 	form, err := c.MultipartForm()
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid multipart form"})
+// 		return
+// 	}
 
-	files := form.File["files"]
-	if len(files) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No files received"})
-		return
-	}
+// 	files := form.File["files"]
+// 	if len(files) == 0 {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "No files received"})
+// 		return
+// 	}
 
-	var urls []string
+// 	var urls []string
 
-	for _, file := range files {
-		openedFile, err := file.Open()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open uploaded file"})
-			return
-		}
-		defer openedFile.Close()
+// 	for _, file := range files {
+// 		openedFile, err := file.Open()
+// 		if err != nil {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open uploaded file"})
+// 			return
+// 		}
+// 		defer openedFile.Close()
 
-		ext, reader, err := getFileExtension(openedFile)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to detect file type for: " + file.Filename})
-			return
-		}
+// 		ext, reader, err := getFileExtension(openedFile)
+// 		if err != nil {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to detect file type for: " + file.Filename})
+// 			return
+// 		}
 
-		// Upload to Cloudinary
-		url, err := uploadToCloudinary(reader, file.Filename, ext)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload failed for: " + file.Filename, "details": err.Error()})
-			return
-		}
+// 		_, err = uploadToCloudinary(reader, file.Filename, ext)
+// 		if err != nil {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Upload failed for: " + file.Filename, "details": err.Error()})
+// 			return
+// 		}
 
-		urls = append(urls, url)
-	}
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{"url": urls})
-}
+// 	c.JSON(http.StatusOK, gin.H{"url": urls})
+// }
 
-func HandleFile(file *multipart.FileHeader) (string, error) {
+func HandleFile(file *multipart.FileHeader) (models.MediaItem, error) {
 	openedFile, err := file.Open()
 	if err != nil {
-		return "", err
+		return models.MediaItem{}, err
 	}
 	defer openedFile.Close()
 
 	ext, reader, err := getFileExtension(openedFile)
+	name := strings.TrimSuffix(file.Filename, ext)
+	mimeType := file.Header.Get("Content-Type")
+	if mimeType == "" {
+		mimeType = "image/jpeg"
+	}
 	if err != nil {
-		return "", err
+		return models.MediaItem{}, err
 	}
 
-	url, err := uploadToCloudinary(reader, file.Filename, ext)
+	mediaItem, err := uploadToCloudinary(reader, file.Filename, name, mimeType)
 	if err != nil {
-		return "", err
+		return models.MediaItem{}, err
 	}
 
-	return url, nil
+	return mediaItem, nil
 }
 
-func uploadToCloudinary(file io.Reader, filename, ext string) (string, error) {
+func DeleteMedia(c *gin.Context, publicID string) {
+	cld, err := cloudinary.NewFromParams(
+		os.Getenv("CLOUDINARY_NAME"),
+		os.Getenv("CLOUDINARY_API_KEY"),
+		os.Getenv("CLOUDINARY_API_SECRET"),
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to initialize Cloudinary: " + err.Error()})
+		return
+	}
+
+	resp, err := cld.Upload.Destroy(c, uploader.DestroyParams{
+		PublicID:     publicID,
+		ResourceType: "image",
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete media: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Media deleted successfully",
+		"result":  resp.Result,
+	})
+}
+
+func uploadToCloudinary(file io.Reader, filename, name, mimeType string) (models.MediaItem, error) {
 	err := godotenv.Load(".env")
 	if err != nil {
-		return "", fmt.Errorf("error loading .env: %w", err)
+		return models.MediaItem{}, fmt.Errorf("error loading .env: %w", err)
 	}
 
 	cld, err := cloudinary.NewFromParams(
@@ -126,19 +157,24 @@ func uploadToCloudinary(file io.Reader, filename, ext string) (string, error) {
 		os.Getenv("CLOUDINARY_API_SECRET"),
 	)
 	if err != nil {
-		return "", fmt.Errorf("cloudinary init failed: %w", err)
+		return models.MediaItem{}, fmt.Errorf("cloudinary init failed: %w", err)
 	}
 
-	publicID := filename[:len(filename)-len(filepath.Ext(filename))] // remove original extension
+	publicID := uuid.New().String()
 
 	uploadResp, err := cld.Upload.Upload(context.Background(), file, uploader.UploadParams{
 		PublicID: publicID,
 	})
 	if err != nil {
-		return "", err
+		return models.MediaItem{}, err
 	}
 
-	return uploadResp.SecureURL, nil
+	return models.MediaItem{
+		PublicID: publicID,
+		URI:      uploadResp.SecureURL,
+		MimeType: mimeType,
+		FileName: name,
+	}, nil
 }
 
 func getFileExtension(file io.Reader) (string, io.Reader, error) {

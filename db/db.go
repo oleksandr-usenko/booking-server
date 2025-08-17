@@ -62,7 +62,7 @@ func createTables() {
         price BIGINT,
         duration BIGINT,
         user_id BIGINT REFERENCES users(id),
-        media_urls JSONB,
+        media JSONB,
         currency TEXT
     );`
 

@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"example.com/cloud"
 	"example.com/middlewares"
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +26,10 @@ func RegisterRoutes(server *gin.Engine) {
 	authenticated.GET("/services", getServicesForUser)
 	authenticated.POST("/services", createService)
 	authenticated.PUT("/services/:id", editService)
+	authenticated.PATCH("/services/:id/add-media", addServiceMedia)
+	authenticated.DELETE("/services/:serviceId/delete-media/:id", deleteServiceMedia)
+	authenticated.PATCH("/services/:id/update-media-order", updateMediaOrder)
 
 	// authenticated.GET("/cloudinary-signature", cloud.GetCloudinarySignature)
-	authenticated.POST("/upload", cloud.UploadHandler)
+	// authenticated.POST("/upload", cloud.UploadHandler)
 }
