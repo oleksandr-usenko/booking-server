@@ -66,11 +66,26 @@ func createTables() {
         currency TEXT
     );`
 
+	createSchedulesTable := `
+		CREATE TABLE IF NOT EXISTS schedules (
+			id         BIGSERIAL PRIMARY KEY,
+			user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			date       DATE   NOT NULL,
+			start_time TIME   NOT NULL,
+			end_time   TIME   NOT NULL,
+			CONSTRAINT chk_time_range CHECK (end_time > start_time)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_schedules_user_date
+		ON schedules (user_id, date);
+	`
+
 	statements := []string{
 		createUsersTable,
 		createEventsTable,
 		createServicesTable,
 		createRegistrationTable,
+		createSchedulesTable,
 	}
 
 	for _, stmt := range statements {
