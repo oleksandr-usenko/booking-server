@@ -2,6 +2,7 @@ package routes
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"example.com/models"
@@ -11,29 +12,26 @@ import (
 func getSchedule(c *gin.Context) {
 	userID := c.GetInt64("userId")
 
-	// FIX: exported field + json tag so Gin can bind it
-	type DaysRange struct {
-		Days int `json:"days" binding:"required"` // e.g. 1,4,7,14,30,60
-	}
-	var req DaysRange
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Can't parse the request: " + err.Error()})
-		return
-	}
-	if req.Days <= 0 {
-		req.Days = 1 // default to 1 day (today only)
+	// Parse `days` from query param, default = 1
+	daysStr := c.Query("days")
+	days := 1
+	if daysStr != "" {
+		if v, err := strconv.Atoi(daysStr); err == nil && v > 0 {
+			days = v
+		}
 	}
 
-	start := time.Now().UTC() // or use the user's tz if you store local dates
+	start := time.Now().UTC() // still UTC, adjust if you store tz
 
-	out, err := models.GetScheduleForRange(c.Request.Context(), userID, start, req.Days)
+	out, err := models.GetScheduleForRange(c.Request.Context(), userID, start, days)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "server error: " + err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"start":  start.Format("2006-01-02"),
-		"days":   req.Days,
+		"days":   days,
 		"ranges": out, // map[date][]TimeRange
 	})
 }
