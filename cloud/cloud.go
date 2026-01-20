@@ -162,9 +162,21 @@ func uploadToCloudinary(file io.Reader, filename, name, mimeType string) (models
 
 	publicID := uuid.New().String()
 
-	uploadResp, err := cld.Upload.Upload(context.Background(), file, uploader.UploadParams{
+	// Check if the file is HEIC/HEIF and needs conversion
+	uploadParams := uploader.UploadParams{
 		PublicID: publicID,
-	})
+	}
+
+	// Convert HEIC/HEIF to JPG
+	if strings.Contains(strings.ToLower(mimeType), "heic") ||
+	   strings.Contains(strings.ToLower(mimeType), "heif") ||
+	   strings.HasSuffix(strings.ToLower(filename), ".heic") ||
+	   strings.HasSuffix(strings.ToLower(filename), ".heif") {
+		uploadParams.Format = "jpg"
+		mimeType = "image/jpeg"
+	}
+
+	uploadResp, err := cld.Upload.Upload(context.Background(), file, uploadParams)
 	if err != nil {
 		return models.MediaItem{}, err
 	}

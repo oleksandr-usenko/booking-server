@@ -9,6 +9,8 @@ func RegisterRoutes(server *gin.Engine) {
 	api := server.Group("/api")
 	api.GET("/events", getEvents)
 	api.GET("/events/:id", getEvent)
+	api.GET("/services/:id", getServicesById)
+	api.GET("/schedule/:id/:date", getScheduleByIdForDate)
 
 	auth := api.Group("/auth")
 	auth.POST("/signup", signup)
@@ -33,7 +35,8 @@ func RegisterRoutes(server *gin.Engine) {
 	// authenticated.GET("/cloudinary-signature", cloud.GetCloudinarySignature)
 	// authenticated.POST("/upload", cloud.UploadHandler)
 
-	authenticated.GET("/schedule", getSchedule)
-	authenticated.GET("/schedule/:date", getScheduleForDate)
-	authenticated.POST("/schedule/:date", saveSchedule)
+	// User's own schedule endpoints (authenticated)
+	authenticated.GET("/schedule/me", getSchedule)
+	authenticated.GET("/schedule/me/:date", getScheduleForDate)
+	authenticated.POST("/schedule/me/:date", saveSchedule)
 }

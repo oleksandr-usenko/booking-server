@@ -21,8 +21,8 @@ type TimeRangePayload struct {
 // DB/API output per range (for a single day)
 type TimeRange struct {
 	ID        int64  `json:"id"`
-	StartTime string `json:"start_time"` // "HH:MM"
-	EndTime   string `json:"end_time"`   // "HH:MM"
+	StartTime string `json:"start"` // "HH:MM"
+	EndTime   string `json:"end"`   // "HH:MM"
 }
 
 // -------- Single day getter --------

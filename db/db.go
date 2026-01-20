@@ -63,7 +63,8 @@ func createTables() {
         duration BIGINT,
         user_id BIGINT REFERENCES users(id),
         media JSONB,
-        currency TEXT
+        currency TEXT,
+        timestamp TIMESTAMP
     );`
 
 	createSchedulesTable := `
@@ -93,6 +94,16 @@ func createTables() {
 		if err != nil {
 			panic("Could not create table: " + err.Error())
 		}
+	}
+
+	// Add timestamp column if it doesn't exist (for existing databases)
+	alterServicesTable := `
+		ALTER TABLE services
+		ADD COLUMN IF NOT EXISTS timestamp TIMESTAMP;
+	`
+	_, err := DB.Exec(alterServicesTable)
+	if err != nil {
+		panic("Could not alter services table: " + err.Error())
 	}
 
 	fmt.Println("PostgreSQL tables created successfully!")

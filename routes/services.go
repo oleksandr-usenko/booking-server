@@ -22,6 +22,22 @@ func getServicesForUser(context *gin.Context) {
 	context.JSON(http.StatusOK, services)
 }
 
+func getServicesById(context *gin.Context) {
+	id, err := strconv.ParseInt(context.Param("id"), 10, 64)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse id: " + err.Error()})
+		return
+	}
+
+	services, err := models.GetServicesForUser(id)
+
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch services by id: " + err.Error()})
+		return
+	}
+	context.JSON(http.StatusOK, services)
+}
+
 func createService(context *gin.Context) {
 	err := context.Request.ParseMultipartForm(10 << 20) // 10 MB max memory
 	if err != nil {
