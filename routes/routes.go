@@ -6,6 +6,11 @@ import (
 )
 
 func RegisterRoutes(server *gin.Engine) {
+	// Health check endpoint
+	server.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
 	api := server.Group("/api")
 	api.GET("/events", getEvents)
 	api.GET("/events/:id", getEvent)
