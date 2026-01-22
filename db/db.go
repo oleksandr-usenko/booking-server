@@ -32,6 +32,8 @@ func InitDB() {
 	// Optional connection pool
 	DB.SetMaxOpenConns(10)
 	DB.SetMaxIdleConns(5)
+	DB.SetConnMaxLifetime(5 * time.Minute)
+	DB.SetConnMaxIdleTime(5 * time.Minute)
 
 	// Verify connection with retries
 	maxRetries := 10

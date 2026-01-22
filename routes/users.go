@@ -3,6 +3,7 @@ package routes
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"example.com/models"
 	"example.com/utils"
@@ -22,6 +23,11 @@ func signup(context *gin.Context) {
 	err = user.Save()
 	if err != nil {
 		log.Printf("Signup error - Failed to save user: %v", err)
+		// Check if it's a duplicate email error
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			context.JSON(http.StatusConflict, gin.H{"message": "Email already exists"})
+			return
+		}
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Server error: " + err.Error()})
 		return
 	}

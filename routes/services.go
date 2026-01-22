@@ -2,6 +2,7 @@ package routes
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -82,6 +83,7 @@ func createService(context *gin.Context) {
 
 	service, err = service.CreateService()
 	if err != nil {
+		log.Printf("CreateService error - Failed to create service: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Server error: " + err.Error()})
 		return
 	}
