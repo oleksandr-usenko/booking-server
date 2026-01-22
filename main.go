@@ -16,7 +16,10 @@ func main() {
 	if err != nil {
 		log.Println("No .env file found or error loading .env file")
 	}
-	db.InitDB()
+
+	// Initialize database in background
+	go db.InitDB()
+
 	server := gin.Default()
 
 	server.Use(cors.New(cors.Config{
