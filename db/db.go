@@ -3,7 +3,9 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -30,6 +32,23 @@ func InitDB() {
 	// Optional connection pool
 	DB.SetMaxOpenConns(10)
 	DB.SetMaxIdleConns(5)
+
+	// Verify connection with retries
+	maxRetries := 10
+	for i := 0; i < maxRetries; i++ {
+		err = DB.Ping()
+		if err == nil {
+			log.Println("Successfully connected to database")
+			break
+		}
+		log.Printf("Failed to ping database (attempt %d/%d): %v", i+1, maxRetries, err)
+		if i < maxRetries-1 {
+			time.Sleep(2 * time.Second)
+		}
+	}
+	if err != nil {
+		panic("Could not verify DB connection after retries: " + err.Error())
+	}
 
 	createTables()
 }
