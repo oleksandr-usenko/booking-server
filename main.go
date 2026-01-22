@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"example.com/db"
+	"example.com/middlewares"
 	"example.com/routes"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,9 @@ func main() {
 	if err != nil {
 		log.Println("No .env file found or error loading .env file")
 	}
+
+	// Initialize logging
+	middlewares.Init()
 
 	// Initialize database in background
 	go db.InitDB()
@@ -30,8 +34,8 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-	// server.Use(middlewares.RequestLogger())
-	// server.Use(middlewares.RecoveryLogger())
+	server.Use(middlewares.RequestLogger())
+	server.Use(middlewares.RecoveryLogger())
 
 	routes.RegisterRoutes(server)
 

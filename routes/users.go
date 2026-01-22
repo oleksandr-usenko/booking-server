@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 
 	"example.com/models"
@@ -13,16 +14,19 @@ func signup(context *gin.Context) {
 	err := context.ShouldBindJSON(&user)
 
 	if err != nil {
+		log.Printf("Signup error - Failed to parse request: %v", err)
 		context.JSON(http.StatusBadRequest, gin.H{"message": "can't parse the request: " + err.Error()})
 		return
 	}
 
 	err = user.Save()
 	if err != nil {
+		log.Printf("Signup error - Failed to save user: %v", err)
 		context.JSON(http.StatusInternalServerError, gin.H{"message": "Server error: " + err.Error()})
 		return
 	}
 
+	log.Printf("User created successfully: %s", user.Email)
 	context.JSON(http.StatusOK, gin.H{"message": "User created"})
 }
 

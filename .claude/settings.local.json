@@ -3,7 +3,12 @@
     "allow": [
       "Bash(go build:*)",
       "Bash(go run:*)",
-      "Bash(flyctl postgres:*)"
+      "Bash(flyctl postgres:*)",
+      "Bash(flyctl machine start:*)",
+      "Bash(fly machine start:*)",
+      "Bash(where:*)",
+      "Bash(powershell:*)",
+      "Bash(git push)"
     ]
   }
 }

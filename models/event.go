@@ -21,20 +21,10 @@ func (e *Event) Save() error {
 	query := `
 		INSERT INTO events(name, description, location, dateTime, user_id)
 		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
 	`
-	stmt, err := db.DB.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
 
-	res, err := stmt.Exec(e.Name, e.Description, e.Location, e.DateTime, e.UserID)
-	if err != nil {
-		return err
-	}
-
-	id, err := res.LastInsertId()
-	e.ID = id
+	err := db.DB.QueryRow(query, e.Name, e.Description, e.Location, e.DateTime, e.UserID).Scan(&e.ID)
 	return err
 }
 
