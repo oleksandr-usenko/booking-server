@@ -129,13 +129,13 @@ func editService(context *gin.Context) {
 }
 
 func deleteServiceMedia(c *gin.Context) {
-	serviceID, err := strconv.ParseInt(c.Param("serviceId"), 10, 64)
+	serviceID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid service ID: " + err.Error()})
 		return
 	}
 
-	publicID := c.Param("id")
+	publicID := c.Param("mediaId")
 	if publicID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Missing media id"})
 		return
@@ -255,4 +255,38 @@ func updateMediaOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Media added successfully", "service": service})
+}
+
+func deleteService(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid service ID: " + err.Error()})
+		return
+	}
+
+	userID := c.GetInt64("userId")
+
+	service, err := models.GetServiceById(id, userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Service not found: " + err.Error()})
+		return
+	}
+
+	if service.UserID != userID {
+		c.JSON(http.StatusUnauthorized, gin.H{"message": "You are not authorized to delete this service"})
+		return
+	}
+
+	// Delete all media from Cloudinary before deleting the service
+	for _, mediaItem := range service.Media {
+		cloud.DeleteMedia(c, mediaItem.PublicID)
+	}
+
+	err = service.DeleteService()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete service: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Service deleted successfully"})
 }

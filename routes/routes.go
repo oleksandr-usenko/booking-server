@@ -27,10 +27,11 @@ func RegisterRoutes(server *gin.Engine) {
 
 	authenticated.GET("/services", getServicesForUser)
 	authenticated.POST("/services", createService)
-	authenticated.PUT("/services/:id", editService)
 	authenticated.PATCH("/services/:id/add-media", addServiceMedia)
-	authenticated.DELETE("/services/:serviceId/delete-media/:id", deleteServiceMedia)
+	authenticated.DELETE("/services/:id/delete-media/:mediaId", deleteServiceMedia)
 	authenticated.PATCH("/services/:id/update-media-order", updateMediaOrder)
+	authenticated.PUT("/services/:id", editService)
+	authenticated.DELETE("/services/:id", deleteService)
 
 	// authenticated.GET("/cloudinary-signature", cloud.GetCloudinarySignature)
 	// authenticated.POST("/upload", cloud.UploadHandler)

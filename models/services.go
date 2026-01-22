@@ -164,3 +164,30 @@ func (s *Service) SaveMedia() (*Service, error) {
 	_, err = stmt.Exec(mediaJSON, s.Timestamp, s.ID, s.UserID)
 	return s, err
 }
+
+func (s *Service) DeleteService() error {
+	query := `DELETE FROM services WHERE id = $1 AND user_id = $2`
+
+	stmt, err := db.DB.Prepare(query)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	result, err := stmt.Exec(s.ID, s.UserID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("service not found or you are not authorized to delete it")
+	}
+
+	return nil
+}
