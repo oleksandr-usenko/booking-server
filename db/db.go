@@ -11,10 +11,15 @@ import (
 var DB *sql.DB
 
 func InitDB() {
-	// local development DSN
-	username := os.Getenv("PG_USERNAME")
-	password := os.Getenv("PG_PASSWORD")
-	dsn := fmt.Sprintf("postgres://%s:%s@localhost:5432/mydb?sslmode=disable", username, password)
+	var dsn string
+
+	dsn = os.Getenv("DATABASE_URL")
+
+	if dsn == "" {
+		username := os.Getenv("PG_USERNAME")
+		password := os.Getenv("PG_PASSWORD")
+		dsn = fmt.Sprintf("postgres://%s:%s@localhost:5432/mydb?sslmode=disable", username, password)
+	}
 
 	var err error
 	DB, err = sql.Open("postgres", dsn)
