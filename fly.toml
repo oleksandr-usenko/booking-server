@@ -11,6 +11,14 @@ primary_region = "iad"
   min_machines_running = 0
   processes = ["app"]
 
+  # Increase grace period for database connection
+  [[http_service.checks]]
+    grace_period = "60s"
+    interval = "15s"
+    method = "GET"
+    timeout = "5s"
+    path = "/api/events"
+
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'
