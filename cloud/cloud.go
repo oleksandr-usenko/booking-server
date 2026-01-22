@@ -20,7 +20,6 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/joho/godotenv"
 )
 
 type CloudProvider struct {
@@ -146,11 +145,8 @@ func DeleteMedia(c *gin.Context, publicID string) {
 }
 
 func uploadToCloudinary(file io.Reader, filename, name, mimeType string) (models.MediaItem, error) {
-	err := godotenv.Load(".env")
-	if err != nil {
-		return models.MediaItem{}, fmt.Errorf("error loading .env: %w", err)
-	}
-
+	// Don't load .env here - it's already loaded in main.go
+	// This function is called for each file upload and doesn't need to reload env
 	cld, err := cloudinary.NewFromParams(
 		os.Getenv("CLOUDINARY_NAME"),
 		os.Getenv("CLOUDINARY_API_KEY"),
@@ -169,9 +165,9 @@ func uploadToCloudinary(file io.Reader, filename, name, mimeType string) (models
 
 	// Convert HEIC/HEIF to JPG
 	if strings.Contains(strings.ToLower(mimeType), "heic") ||
-	   strings.Contains(strings.ToLower(mimeType), "heif") ||
-	   strings.HasSuffix(strings.ToLower(filename), ".heic") ||
-	   strings.HasSuffix(strings.ToLower(filename), ".heif") {
+		strings.Contains(strings.ToLower(mimeType), "heif") ||
+		strings.HasSuffix(strings.ToLower(filename), ".heic") ||
+		strings.HasSuffix(strings.ToLower(filename), ".heif") {
 		uploadParams.Format = "jpg"
 		mimeType = "image/jpeg"
 	}
