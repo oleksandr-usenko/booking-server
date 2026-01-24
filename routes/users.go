@@ -10,6 +10,42 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func getAlias(c *gin.Context) {
+	userID := c.GetInt64("userId")
+
+	alias, err := models.GetAlias(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to get alias: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"alias": alias})
+}
+
+func updateAlias(c *gin.Context) {
+	userID := c.GetInt64("userId")
+
+	var body struct {
+		Alias string `json:"alias" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid request body: " + err.Error()})
+		return
+	}
+
+	err := models.UpdateAlias(userID, body.Alias)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
+			c.JSON(http.StatusConflict, gin.H{"message": "alias already taken"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "failed to update alias: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "alias updated", "alias": body.Alias})
+}
+
 func signup(context *gin.Context) {
 	var user models.User
 	err := context.ShouldBindJSON(&user)

@@ -107,12 +107,33 @@ func createTables() {
 		ON schedules (user_id, date);
 	`
 
+	createAppointmentsTable := `
+		CREATE TABLE IF NOT EXISTS appointments (
+			id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			service_id BIGINT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+			date       DATE NOT NULL,
+			start_time TIME NOT NULL,
+			end_time   TIME NOT NULL,
+			first_name TEXT NOT NULL,
+			last_name  TEXT NOT NULL,
+			email      TEXT NOT NULL,
+			phone      TEXT NOT NULL,
+			instagram  TEXT,
+			created_at TIMESTAMP DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_appointments_user_id
+		ON appointments (user_id);
+	`
+
 	statements := []string{
 		createUsersTable,
 		createEventsTable,
 		createServicesTable,
 		createRegistrationTable,
 		createSchedulesTable,
+		createAppointmentsTable,
 	}
 
 	for _, stmt := range statements {
@@ -130,6 +151,22 @@ func createTables() {
 	_, err := DB.Exec(alterServicesTable)
 	if err != nil {
 		panic("Could not alter services table: " + err.Error())
+	}
+
+	// Add alias column to users table (for existing databases)
+	alterUsersTable := `
+		ALTER TABLE users
+		ADD COLUMN IF NOT EXISTS alias TEXT UNIQUE DEFAULT gen_random_uuid()::text;
+	`
+	_, err = DB.Exec(alterUsersTable)
+	if err != nil {
+		panic("Could not alter users table: " + err.Error())
+	}
+
+	// Backfill alias for existing users that have NULL
+	_, err = DB.Exec(`UPDATE users SET alias = gen_random_uuid()::text WHERE alias IS NULL`)
+	if err != nil {
+		panic("Could not backfill user aliases: " + err.Error())
 	}
 
 	fmt.Println("PostgreSQL tables created successfully!")

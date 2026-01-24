@@ -16,6 +16,7 @@ func RegisterRoutes(server *gin.Engine) {
 	api.GET("/events/:id", getEvent)
 	api.GET("/services/:id", getServicesById)
 	api.GET("/schedule/:id/:date", getScheduleByIdForDate)
+	api.POST("/appointments/:alias", createAppointment)
 
 	auth := api.Group("/auth")
 	auth.POST("/signup", signup)
@@ -45,4 +46,12 @@ func RegisterRoutes(server *gin.Engine) {
 	authenticated.GET("/schedule/me", getSchedule)
 	authenticated.GET("/schedule/me/:date", getScheduleForDate)
 	authenticated.POST("/schedule/me/:date", saveSchedule)
+
+	// Appointments (authenticated)
+	authenticated.GET("/appointments", getAppointments)
+	authenticated.DELETE("/appointments/:id", deleteAppointment)
+
+	// Alias management (authenticated)
+	authenticated.GET("/alias", getAlias)
+	authenticated.PUT("/alias", updateAlias)
 }
