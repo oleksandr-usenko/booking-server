@@ -23,20 +23,21 @@ func getServicesForUser(context *gin.Context) {
 	context.JSON(http.StatusOK, services)
 }
 
-func getServicesById(context *gin.Context) {
-	id, err := strconv.ParseInt(context.Param("id"), 10, 64)
+func getServicesByAlias(c *gin.Context) {
+	alias := c.Param("alias")
+
+	user, err := models.GetUserByAlias(alias)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse id: " + err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
 		return
 	}
 
-	services, err := models.GetServicesForUser(id)
-
+	services, err := models.GetServicesForUser(user.ID)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch services by id: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Could not fetch services: " + err.Error()})
 		return
 	}
-	context.JSON(http.StatusOK, services)
+	c.JSON(http.StatusOK, services)
 }
 
 func createService(context *gin.Context) {

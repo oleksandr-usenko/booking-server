@@ -56,19 +56,23 @@ func getScheduleForDate(c *gin.Context) {
 	})
 }
 
-func getScheduleByIdForDate(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+func getScheduleByAliasForDate(c *gin.Context) {
+	alias := c.Param("alias")
+
+	user, err := models.GetUserByAlias(alias)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse id: " + err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"message": "user not found"})
 		return
 	}
+
 	dateStr := c.Param("date")
 	date, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "invalid date (use YYYY-MM-DD)"})
 		return
 	}
-	out, err := models.GetSchedule(c.Request.Context(), id, date)
+
+	out, err := models.GetSchedule(c.Request.Context(), user.ID, date)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "server error: " + err.Error()})
 		return

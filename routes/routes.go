@@ -14,8 +14,8 @@ func RegisterRoutes(server *gin.Engine) {
 	api := server.Group("/api")
 	api.GET("/events", getEvents)
 	api.GET("/events/:id", getEvent)
-	api.GET("/services/:id", getServicesById)
-	api.GET("/schedule/:id/:date", getScheduleByIdForDate)
+	api.GET("/services/:alias", getServicesByAlias)
+	api.GET("/schedule/:alias/:date", getScheduleByAliasForDate)
 	api.POST("/appointments/:alias", createAppointment)
 
 	auth := api.Group("/auth")
