@@ -23,6 +23,16 @@ func RegisterRoutes(server *gin.Engine) {
 	auth.POST("/login", login)
 	auth.POST("/refresh", refresh)
 
+	// OAuth routes (web browser redirect flow)
+	auth.GET("/google", googleLogin)
+	auth.GET("/google/callback", googleCallback)
+	auth.GET("/facebook", facebookLogin)
+	auth.GET("/facebook/callback", facebookCallback)
+
+	// OAuth routes (mobile token flow)
+	auth.POST("/google/token", googleTokenLogin)
+	auth.POST("/facebook/token", facebookTokenLogin)
+
 	authenticated := api.Group("/")
 	authenticated.Use(middlewares.Authenticate)
 	authenticated.POST("/events", createEvent)

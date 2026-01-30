@@ -169,5 +169,39 @@ func createTables() {
 		panic("Could not backfill user aliases: " + err.Error())
 	}
 
+	// Add OAuth columns to users table (for SSO support)
+	addOAuthColumns := `
+		ALTER TABLE users
+		ADD COLUMN IF NOT EXISTS oauth_provider TEXT,
+		ADD COLUMN IF NOT EXISTS oauth_provider_id TEXT,
+		ADD COLUMN IF NOT EXISTS name TEXT;
+	`
+	_, err = DB.Exec(addOAuthColumns)
+	if err != nil {
+		panic("Could not add OAuth columns to users table: " + err.Error())
+	}
+
+	// Make password nullable for OAuth users
+	makePasswordNullable := `
+		ALTER TABLE users
+		ALTER COLUMN password DROP NOT NULL;
+	`
+	_, err = DB.Exec(makePasswordNullable)
+	if err != nil {
+		// Ignore error if column is already nullable
+		// This is expected on subsequent runs
+	}
+
+	// Add unique constraint on oauth_provider + oauth_provider_id combination
+	addOAuthUniqueConstraint := `
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_users_oauth_provider_id
+		ON users (oauth_provider, oauth_provider_id)
+		WHERE oauth_provider IS NOT NULL AND oauth_provider_id IS NOT NULL;
+	`
+	_, err = DB.Exec(addOAuthUniqueConstraint)
+	if err != nil {
+		panic("Could not add OAuth unique constraint: " + err.Error())
+	}
+
 	fmt.Println("PostgreSQL tables created successfully!")
 }

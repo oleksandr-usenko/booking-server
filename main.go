@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"example.com/config"
 	"example.com/db"
 	"example.com/middlewares"
 	"example.com/routes"
@@ -17,6 +18,9 @@ func main() {
 	if err != nil {
 		log.Println("No .env file found or error loading .env file")
 	}
+
+	// Initialize OAuth configuration
+	config.InitOAuth()
 
 	// Initialize logging
 	middlewares.Init()

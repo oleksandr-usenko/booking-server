@@ -9,7 +9,9 @@
       "Bash(where:*)",
       "Bash(powershell:*)",
       "Bash(git push)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(go get:*)",
+      "Bash(go mod tidy:*)"
     ]
   }
 }
